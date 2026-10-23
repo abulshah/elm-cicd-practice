@@ -1,0 +1,61 @@
+
+name: Pulse Docker Build and Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/abulshah/elm-cicd-practice
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download Source Code
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run Automated Tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Publish Docker Image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+
+      - name: Verify Published Container
+        run: |
+          docker pull "${IMAGE}:${GITHUB_SHA}"
+          docker run -d --name pulse-test \
+            -p 8000:8000 \
+            "${IMAGE}:${GITHUB_SHA}"
+
+          curl --retry 15 \
+            --retry-delay 1 \
+            --retry-connrefused \
+            -fsS http://127.0.0.1:8000/health
+
+          docker stop pulse-test
+          docker rm pulse-test
