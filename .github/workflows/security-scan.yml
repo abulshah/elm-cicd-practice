@@ -19,4 +19,4 @@ jobs:
           image-ref: ghcr.io/abulshah/elm-cicd-practice:latest
           format: table
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: '1'
