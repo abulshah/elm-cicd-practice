@@ -32,5 +32,5 @@ class PulseHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     ThreadingHTTPServer(
-        ("127.0.0.1", 8000), PulseHandler
+        ("0.0.0.0", 8000), PulseHandler
     ).serve_forever()
