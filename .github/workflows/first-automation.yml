@@ -1,0 +1,20 @@
+
+name: My First Automation
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  first-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Start Automation
+        run: echo "Automation started"
+
+      - name: Show Date
+        run: date -u
+
+      - name: Finish
+        run: echo "Automation completed"
