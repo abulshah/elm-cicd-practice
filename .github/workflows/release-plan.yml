@@ -1,0 +1,70 @@
+
+name: Pulse Controlled Release Plan
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Choose release environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+      image_tag:
+        description: "Docker image tag"
+        required: true
+        default: latest
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-record:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Validate Release Inputs
+        env:
+          TARGET: ${{ inputs.target }}
+          TAG: ${{ inputs.image_tag }}
+          DEMO_TOKEN: ${{ secrets.DEMO_RELEASE_TOKEN }}
+        run: |
+          test "$TARGET" = staging -o "$TARGET" = production
+          test -n "$TAG"
+
+          if [ -n "$DEMO_TOKEN" ]; then
+            echo "Training secret is configured"
+          else
+            echo "Training secret is missing"
+            exit 1
+          fi
+
+          echo "Target environment: $TARGET"
+
+      - name: Verify Docker Image
+        env:
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          docker pull "ghcr.io/${GITHUB_REPOSITORY,,}:${TAG}"
+
+      - name: Generate Release Report
+        env:
+          TARGET: ${{ inputs.target }}
+          TAG: ${{ inputs.image_tag }}
+        run: |
+          mkdir -p reports
+
+          printf '# Pulse Release Plan\n\nTarget: %s\nImage Tag: %s\nStatus: Validated - NOT deployed\n' \
+            "$TARGET" "$TAG" > reports/release-plan.md
+
+          cat reports/release-plan.md
+
+      - name: Upload Release Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulse-release-plan
+          path: reports/release-plan.md
+          if-no-files-found: error
