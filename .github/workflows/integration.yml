@@ -1,20 +1,37 @@
 
-import unittest
-from urllib.request import urlopen
+name: Pulse HTTP Integration
 
+on:
+  workflow_dispatch:
 
-class HttpIntegrationTests(unittest.TestCase):
+permissions:
+  contents: read
 
-    def test_health_endpoint(self):
+jobs:
+  http-integration:
+    runs-on: ubuntu-24.04
 
-        with urlopen(
-            "http://127.0.0.1:8000/health",
-            timeout=5
-        ) as response:
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
 
-            self.assertEqual(response.status, 200)
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
 
-            self.assertEqual(
-                response.read().decode(),
-                "healthy"
-            )
+      - name: Start Pulse API
+        run: |
+          python -m app.server > server.log 2>&1 &
+
+          curl --retry 15 \
+               --retry-delay 1 \
+               --retry-connrefused \
+               -fsS http://127.0.0.1:8000/version
+
+      - name: Run HTTP Integration Tests
+        run: |
+          python -m unittest discover \
+            -s integration \
+            -p 'test_http.py' \
+            -v
